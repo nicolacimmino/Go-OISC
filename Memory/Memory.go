@@ -1,21 +1,50 @@
 package Memory
 
+import (
+	"Go-OISC/Bus"
+)
+
 type Memory struct {
-	data []byte
-	size uint16
+	data        []Bus.DataLinesType
+	baseAddress Bus.AddressLinesType
+	size        Bus.AddressLinesType
+	bus         *Bus.Bus
+	busReceiver chan Bus.BusCycle
 }
 
-func NewMemory(size uint16) *Memory {
-	m := Memory{make([]byte, size), size};
+func NewMemory(size Bus.AddressLinesType, baseAddress Bus.AddressLinesType, bus *Bus.Bus) *Memory {
+	busReceiver := make(chan Bus.BusCycle)
+	bus.Register(busReceiver)
+
+	m := Memory{make([]Bus.DataLinesType, size), baseAddress, size, bus, busReceiver}
+
+	go m.process()
+
 	return &m
 }
 
-func (m Memory) Set(address uint16, value byte) {
-	address = address % m.size
-	m.data[address] = value
+func (Memory *Memory) Close() {
+	close(Memory.busReceiver)
 }
 
-func (m Memory) Get(address uint16) byte {
-	address = address % m.size
-	return m.data[address]
+func (memory *Memory) process() {
+	for {
+		busCycle, ok := <-memory.busReceiver
+		if !ok {
+			return
+		}
+
+		if busCycle.Clock {
+			if busCycle.Address < memory.baseAddress || busCycle.Address > memory.baseAddress+memory.size {
+				continue
+			}
+
+			if busCycle.RW {
+				memory.bus.Data = memory.data[busCycle.Address-memory.baseAddress]
+				continue
+			}
+
+			memory.data[busCycle.Address-memory.baseAddress] = busCycle.Data
+		}
+	}
 }

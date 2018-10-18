@@ -5,10 +5,13 @@ import (
 )
 
 func TestSubscribe(t *testing.T) {
-	bus := NewBus()
-	receiver := make(chan busCycle)
+	bus := NewBus("main")
+	defer bus.Close()
+
+	receiver := make(chan BusCycle)
 	bus.Register(receiver)
 
+	bus.Lock()
 	bus.Address = 0x10
 	bus.Data = 0xFF
 	bus.Clock <- true
@@ -21,14 +24,16 @@ func TestSubscribe(t *testing.T) {
 }
 
 func TestSubscribeMultiple(t *testing.T) {
-	bus := NewBus()
-	receiverA := make(chan busCycle)
+	bus := NewBus("main")
+	defer bus.Close()
+
+	receiverA := make(chan BusCycle)
 	bus.Register(receiverA)
 
-	receiverB := make(chan busCycle)
+	receiverB := make(chan BusCycle)
 	bus.Register(receiverB)
 
-	listener := func(receiver chan busCycle, aOK *bool) {
+	listener := func(receiver chan BusCycle, aOK *bool) {
 		for {
 			cycle := <-receiver
 			if cycle.Clock == true {
@@ -42,12 +47,10 @@ func TestSubscribeMultiple(t *testing.T) {
 	bOK := false
 	go listener(receiverB, &bOK)
 
-	bus.Address = 0x10
-	bus.Data = 0xFF
-	bus.Clock <- true
-	bus.Clock <- false
+	bus.Write(0x10, 0xFF)
 
 	if !aOK || !bOK {
+		t.Log(aOK, bOK)
 		t.Fail()
 	}
 }

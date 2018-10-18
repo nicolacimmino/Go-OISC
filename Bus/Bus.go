@@ -1,41 +1,99 @@
 package Bus
 
-type addressLinesType uint16
-type dataLinesType uint16
+import (
+	"sync"
+)
 
-type bus struct {
-	Address     addressLinesType
-	Data        dataLinesType
+type AddressLinesType uint8
+type DataLinesType uint8
+
+type Bus struct {
+	Address     AddressLinesType
+	Data        DataLinesType
 	Clock       chan bool
-	subscribers []chan busCycle
+	RW          bool
+	subscribers []chan BusCycle
+	name        string
+	Halt        bool
+	sync.RWMutex
 }
 
-type busCycle struct {
-	Address addressLinesType
-	Data    dataLinesType
+type BusCycle struct {
+	Address AddressLinesType
+	Data    DataLinesType
+	RW      bool
 	Clock   bool
+	Bus     *Bus
 }
 
-func NewBus() *bus {
-	bus := bus{0, 0, make(chan bool), make([]chan busCycle, 0)}
+var instances = make(map[string]*Bus)
+
+func NewBus(busName string) *Bus {
+
+	existingBus, exixsts := instances[busName]
+
+	if exixsts {
+		return existingBus
+	}
+
+	bus := Bus{0, 0, make(chan bool), false, make([]chan BusCycle, 0), busName, true, sync.RWMutex{}}
 
 	go bus.process()
+
+	instances[busName] = &bus
 
 	return &bus
 }
 
-func (b *bus) Register(subscriber chan busCycle) {
-	b.subscribers = append(b.subscribers, subscriber)
+func (bus *Bus) Close() {
+	delete(instances, bus.name)
+	close(bus.Clock)
 }
 
-func (b *bus) process() {
-	for {
-		clock := <-b.Clock
-		cycle := busCycle{b.Address, b.Data, clock}
+func (bus *Bus) Register(subscriber chan BusCycle) {
+	bus.subscribers = append(bus.subscribers, subscriber)
+}
 
-		for _, subscriber := range b.subscribers {
-			subscriber <- cycle
+func (bus *Bus) Write(address AddressLinesType, data DataLinesType) {
+	bus.Data = data
+	bus.Address = address
+	bus.RW = false
+	bus.Lock()
+	bus.Clock <- true
+	bus.Lock()
+	bus.Clock <- false
+
+	bus.Lock()
+	defer bus.Unlock()
+}
+
+func (bus *Bus) Read(address AddressLinesType) DataLinesType {
+	//bus.Lock()
+	bus.Address = address
+	bus.RW = true
+	bus.Lock()
+	bus.Clock <- true
+	bus.Lock()
+	bus.Clock <- false
+
+	bus.Lock()
+	defer bus.Unlock()
+
+	return bus.Data
+}
+
+func (bus *Bus) process() {
+	for {
+		clock, ok := <-bus.Clock
+		if !ok {
+			return
 		}
 
+		cycle := BusCycle{bus.Address, bus.Data, bus.RW, clock, bus}
+
+		for _, subscriber := range bus.subscribers {
+			subscriber <- cycle
+		}
+		bus.Unlock()
 	}
 }

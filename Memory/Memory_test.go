@@ -1,33 +1,38 @@
 package Memory
 
-import "testing"
+import (
+	"Go-OISC/Bus"
+	"testing"
+)
 
-func TestSetGet(t *testing.T) {
-	m := NewMemory(0x100)
+func TestReadBack(t *testing.T) {
+	bus := Bus.NewBus("main")
+	defer bus.Close()
 
-	m.Set(5, 12)
+	memory := NewMemory(0xFF, 0x0, bus)
+	defer memory.Close()
 
-	if m.Get(5) != 12 {
+	bus.Write(0x05, 0x02)
+	bus.Write(0x06, 0x10)
+	bus.Read(0x05)
+
+	if bus.Data != 0x02 {
 		t.Fail()
 	}
 }
 
-func TestWriteAddressWraps(t *testing.T) {
-	m := NewMemory(0x100)
+func TestReadOutsideBounds(t *testing.T) {
+	bus := Bus.NewBus("main")
+	defer bus.Close()
 
-	m.Set(0x101, 12)
+	memory := NewMemory(0x20, 0x0, bus)
+	defer memory.Close()
 
-	if m.Get(1) != 12 {
-		t.Fail()
-	}
-}
+	bus.Write(0x05, 0x02)
+	bus.Read(0x15)
 
-func TestReadAddressWraps(t *testing.T) {
-	m := NewMemory(0x100)
-
-	m.Set(0x1, 12)
-
-	if m.Get(0x101) != 12 {
+	if bus.Data != 0x00 {
+		t.Log(bus)
 		t.Fail()
 	}
 }
