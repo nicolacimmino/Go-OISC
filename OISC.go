@@ -19,12 +19,15 @@ func main() {
 	bus.Write(0x05, 0xFF)
 
 	//bus.Halt = false
-	//time.Sleep(1 * time.Second)
-	//bus.Halt = true
+	//for {
+	//	if bus.Halt {
+	//		break
+	//	}
+	//	time.Sleep(100 * time.Millisecond)
+	//}
 
 	for address := 0; address < 0x8; address++ {
 		val := bus.Read(Bus.AddressLinesType(address))
 		fmt.Println(val)
-		//time.Sleep(1 * time.Second)
 	}
 }

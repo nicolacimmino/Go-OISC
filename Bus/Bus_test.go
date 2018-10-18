@@ -1,56 +1,64 @@
 package Bus
 
-import (
-	"testing"
-)
+import "testing"
 
+/**
+ * Ensure the bus is notifying a single subscriber.
+ */
 func TestSubscribe(t *testing.T) {
 	bus := NewBus("main")
 	defer bus.Close()
 
-	receiver := make(chan BusCycle)
-	bus.Register(receiver)
+	subscriber := make(Subscriber)
+	bus.Subscribe(subscriber)
 
 	bus.Lock()
 	bus.Address = 0x10
 	bus.Data = 0xFF
 	bus.Clock <- true
 
-	busOperation := <-receiver
+	_ = <-subscriber
 
-	if busOperation.Address != 0x10 || busOperation.Data != 0xFF {
+	bus.Lock()
+	defer bus.Unlock()
+
+	if bus.Address != 0x10 || bus.Data != 0xFF {
 		t.Fail()
 	}
 }
 
+/**
+ * Ensure the bus is fanning out events to multiple subscribers.
+ */
 func TestSubscribeMultiple(t *testing.T) {
+	const subscribersCount = 10
+
 	bus := NewBus("main")
 	defer bus.Close()
 
-	receiverA := make(chan BusCycle)
-	bus.Register(receiverA)
-
-	receiverB := make(chan BusCycle)
-	bus.Register(receiverB)
-
-	listener := func(receiver chan BusCycle, aOK *bool) {
+	listener := func(subscriber Subscriber, oks *[subscribersCount]bool, ix int, bus Bus) {
 		for {
-			cycle := <-receiver
-			if cycle.Clock == true {
-				*aOK = true
+			clock := <-subscriber
+			if clock {
+				oks[ix] = true
 			}
 		}
 	}
 
-	aOK := false
-	go listener(receiverA, &aOK)
-	bOK := false
-	go listener(receiverB, &bOK)
+	subscribers := [10]Subscriber{}
+	oks := [subscribersCount]bool{}
+
+	for ix := 0; ix < subscribersCount; ix++ {
+		subscribers[ix] = make(Subscriber)
+		bus.Subscribe(subscribers[ix])
+		go listener(subscribers[ix], &oks, ix, *bus)
+	}
 
 	bus.Write(0x10, 0xFF)
 
-	if !aOK || !bOK {
-		t.Log(aOK, bOK)
-		t.Fail()
+	for ix := 0; ix < subscribersCount; ix++ {
+		if !oks[ix] {
+			t.Fail()
+		}
 	}
 }

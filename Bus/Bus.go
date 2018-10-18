@@ -1,76 +1,83 @@
 package Bus
 
 import (
-	"go/types"
+	"fmt"
 	"sync"
 )
 
 type AddressLinesType uint8
+
 type DataLinesType uint8
 
+type Subscriber chan bool
+
+/**
+ * Map of named instances of this multiton.
+ */
+var instances = make(map[string]*Bus)
+
+/**
+ *
+ */
 type Bus struct {
 	Address     AddressLinesType
 	Data        DataLinesType
 	Clock       chan bool
 	RW          bool
-	subscribers []chan BusCycle
+	subscribers []Subscriber
 	name        string
 	Halt        bool
 	sync.Mutex
 }
 
-type BusCycle struct {
-	Address AddressLinesType
-	Data    DataLinesType
-	RW      bool
-	Clock   bool
-	Bus     *Bus
-}
-
-var instances = make(map[string]*Bus)
-
+/**
+ * Constructor. Bus is a multiton, named instances can be created/retrieved with NewBus.
+ */
 func NewBus(busName string) *Bus {
 
-	existingBus, exixsts := instances[busName]
+	existingBus, exists := instances[busName]
 
-	if exixsts {
+	if exists {
 		return existingBus
 	}
 
-	bus := Bus{0, 0, make(chan bool), false, make([]chan BusCycle, 0), busName, true, sync.Mutex{}}
+	bus := Bus{0, 0, make(chan bool), false, make([]Subscriber, 0), busName, true, sync.Mutex{}}
+	instances[busName] = &bus
 
 	go bus.process()
-
-	instances[busName] = &bus
 
 	return &bus
 }
 
-func (bus *Bus) Close() {
-	delete(instances, bus.name)
-	close(bus.Clock)
-}
-
-func (bus *Bus) Register(subscriber chan BusCycle) {
+/**
+ * Subscribe to bus events.
+ */
+func (bus *Bus) Subscribe(subscriber Subscriber) {
 	bus.subscribers = append(bus.subscribers, subscriber)
 }
 
+/**
+ * Perform a write operation.
+ */
 func (bus *Bus) Write(address AddressLinesType, data DataLinesType) {
 	bus.Data = data
 	bus.Address = address
 	bus.RW = false
-	bus.toggleClock(true)
-	bus.toggleClock(false)
+	bus.clockBus(true)
+	bus.clockBus(false)
 
 	bus.Lock()
 	bus.Unlock()
 }
 
+/**
+ * Perform a read operation.
+ */
 func (bus *Bus) Read(address AddressLinesType) DataLinesType {
 	bus.Address = address
 	bus.RW = true
-	bus.toggleClock(true)
-	bus.toggleClock(false)
+	bus.clockBus(true)
+	bus.clockBus(false)
 
 	bus.Lock()
 	defer bus.Unlock()
@@ -78,11 +85,25 @@ func (bus *Bus) Read(address AddressLinesType) DataLinesType {
 	return bus.Data
 }
 
-func (bus *Bus) toggleClock(state bool) {
+/**
+ * Close the bus and release resources.
+ */
+func (bus *Bus) Close() {
+	delete(instances, bus.name)
+	close(bus.Clock)
+}
+
+/**
+ * Clock the bus.
+ */
+func (bus *Bus) clockBus(state bool) {
 	bus.Lock()
 	bus.Clock <- state
 }
 
+/**
+ * Monitor the bus Clock and fan it out to all subscribers.
+ */
 func (bus *Bus) process() {
 	for {
 		clock, ok := <-bus.Clock
@@ -90,11 +111,13 @@ func (bus *Bus) process() {
 			return
 		}
 
-		cycle := BusCycle{bus.Address, bus.Data, bus.RW, clock, bus}
-
 		for _, subscriber := range bus.subscribers {
-			subscriber <- cycle
+			subscriber <- clock
 		}
 		bus.Unlock()
 	}
+}
+
+func (bus *Bus) String() string {
+	return fmt.Sprintf("A:%#X D:%#X", bus.Address, bus.Data)
 }

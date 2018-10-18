@@ -13,12 +13,12 @@ type subleqProcessor struct {
 func NewSubleqProcessor(bus Bus.Bus) *subleqProcessor {
 	processor := subleqProcessor{&bus, 0}
 
-	//go processor.Execute()
+	go processor.process()
 
 	return &processor
 }
 
-func (processor *subleqProcessor) Execute() {
+func (processor *subleqProcessor) process() {
 	for {
 		if processor.bus.Halt {
 			time.Sleep(100 * time.Millisecond)
@@ -26,13 +26,13 @@ func (processor *subleqProcessor) Execute() {
 		}
 
 		if processor.PC == 0xFF {
-			break
+			processor.bus.Halt = true
 		}
 
 		opA := processor.bus.Read(processor.PC)
 		opB := processor.bus.Read(processor.PC + 1)
 		result := opB - opA
-		//processor.bus.Write(processor.PC, result)
+		processor.bus.Write(processor.PC, result)
 		if result <= 0 {
 			processor.PC = Bus.AddressLinesType(processor.bus.Read(processor.PC + 2))
 			continue

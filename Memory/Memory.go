@@ -1,20 +1,24 @@
 package Memory
 
-import (
-	"Go-OISC/Bus"
-)
+import "Go-OISC/Bus"
 
+/**
+ *
+ */
 type Memory struct {
-	data        []Bus.DataLinesType
-	baseAddress Bus.AddressLinesType
-	size        Bus.AddressLinesType
-	bus         *Bus.Bus
-	busReceiver chan Bus.BusCycle
+	data                []Bus.DataLinesType
+	baseAddress         Bus.AddressLinesType
+	size                Bus.AddressLinesType
+	bus                 *Bus.Bus
+	busEventsSubscriber Bus.Subscriber
 }
 
+/**
+ * Constructor.
+ */
 func NewMemory(size Bus.AddressLinesType, baseAddress Bus.AddressLinesType, bus *Bus.Bus) *Memory {
-	busReceiver := make(chan Bus.BusCycle)
-	bus.Register(busReceiver)
+	busReceiver := make(Bus.Subscriber)
+	bus.Subscribe(busReceiver)
 
 	m := Memory{make([]Bus.DataLinesType, size), baseAddress, size, bus, busReceiver}
 
@@ -23,28 +27,34 @@ func NewMemory(size Bus.AddressLinesType, baseAddress Bus.AddressLinesType, bus 
 	return &m
 }
 
-func (Memory *Memory) Close() {
-	close(Memory.busReceiver)
+/**
+ * Release resources.
+ */
+func (memory *Memory) Close() {
+	close(memory.busEventsSubscriber)
 }
 
+/**
+ * Wait for events from the bus and process memory commands.
+ */
 func (memory *Memory) process() {
 	for {
-		busCycle, ok := <-memory.busReceiver
+		clock, ok := <-memory.busEventsSubscriber
 		if !ok {
 			return
 		}
 
-		if busCycle.Clock {
-			if busCycle.Address < memory.baseAddress || busCycle.Address > memory.baseAddress+memory.size {
+		if clock {
+			if memory.bus.Address < memory.baseAddress || memory.bus.Address > memory.baseAddress+memory.size {
 				continue
 			}
 
-			if busCycle.RW {
-				memory.bus.Data = memory.data[busCycle.Address-memory.baseAddress]
+			if memory.bus.RW {
+				memory.bus.Data = memory.data[memory.bus.Address-memory.baseAddress]
 				continue
 			}
 
-			memory.data[busCycle.Address-memory.baseAddress] = busCycle.Data
+			memory.data[memory.bus.Address-memory.baseAddress] = memory.bus.Data
 		}
 	}
 }
