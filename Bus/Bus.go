@@ -1,6 +1,7 @@
 package Bus
 
 import (
+	"go/types"
 	"sync"
 )
 
@@ -15,7 +16,7 @@ type Bus struct {
 	subscribers []chan BusCycle
 	name        string
 	Halt        bool
-	sync.RWMutex
+	sync.Mutex
 }
 
 type BusCycle struct {
@@ -36,7 +37,7 @@ func NewBus(busName string) *Bus {
 		return existingBus
 	}
 
-	bus := Bus{0, 0, make(chan bool), false, make([]chan BusCycle, 0), busName, true, sync.RWMutex{}}
+	bus := Bus{0, 0, make(chan bool), false, make([]chan BusCycle, 0), busName, true, sync.Mutex{}}
 
 	go bus.process()
 
@@ -58,28 +59,28 @@ func (bus *Bus) Write(address AddressLinesType, data DataLinesType) {
 	bus.Data = data
 	bus.Address = address
 	bus.RW = false
-	bus.Lock()
-	bus.Clock <- true
-	bus.Lock()
-	bus.Clock <- false
+	bus.toggleClock(true)
+	bus.toggleClock(false)
 
 	bus.Lock()
-	defer bus.Unlock()
+	bus.Unlock()
 }
 
 func (bus *Bus) Read(address AddressLinesType) DataLinesType {
-	//bus.Lock()
 	bus.Address = address
 	bus.RW = true
-	bus.Lock()
-	bus.Clock <- true
-	bus.Lock()
-	bus.Clock <- false
+	bus.toggleClock(true)
+	bus.toggleClock(false)
 
 	bus.Lock()
 	defer bus.Unlock()
 
 	return bus.Data
+}
+
+func (bus *Bus) toggleClock(state bool) {
+	bus.Lock()
+	bus.Clock <- state
 }
 
 func (bus *Bus) process() {

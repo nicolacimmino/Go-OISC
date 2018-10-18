@@ -4,7 +4,6 @@ import (
 	"Go-OISC/Bus"
 	"Go-OISC/Memory"
 	"fmt"
-	"time"
 )
 
 func main() {
@@ -20,7 +19,7 @@ func main() {
 	bus.Write(0x05, 0xFF)
 
 	//bus.Halt = false
-	time.Sleep(1 * time.Second)
+	//time.Sleep(1 * time.Second)
 	//bus.Halt = true
 
 	for address := 0; address < 0x8; address++ {
