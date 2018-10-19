@@ -6,21 +6,21 @@ import "Go-OISC/Bus"
  *
  */
 type Memory struct {
-	data                []Bus.DataLinesType
-	baseAddress         Bus.AddressLinesType
-	size                Bus.AddressLinesType
-	bus                 *Bus.Bus
-	busEventsSubscriber Bus.Subscriber
+	data               []Bus.DataLinesType
+	baseAddress        Bus.AddressLinesType
+	size               Bus.AddressLinesType
+	bus                *Bus.Bus
+	busClockSubscriber Bus.Subscriber
 }
 
 /**
  * Constructor.
  */
 func NewMemory(size Bus.AddressLinesType, baseAddress Bus.AddressLinesType, bus *Bus.Bus) *Memory {
-	busReceiver := make(Bus.Subscriber)
-	bus.Subscribe(busReceiver)
+	busClockSubscriber := make(Bus.Subscriber)
+	bus.SubscribeToClock(busClockSubscriber)
 
-	m := Memory{make([]Bus.DataLinesType, size), baseAddress, size, bus, busReceiver}
+	m := Memory{make([]Bus.DataLinesType, size), baseAddress, size, bus, busClockSubscriber}
 
 	go m.process()
 
@@ -31,7 +31,7 @@ func NewMemory(size Bus.AddressLinesType, baseAddress Bus.AddressLinesType, bus 
  * Release resources.
  */
 func (memory *Memory) Close() {
-	close(memory.busEventsSubscriber)
+	close(memory.busClockSubscriber)
 }
 
 /**
@@ -39,9 +39,9 @@ func (memory *Memory) Close() {
  */
 func (memory *Memory) process() {
 	for {
-		clock, ok := <-memory.busEventsSubscriber
+		clock, ok := <-memory.busClockSubscriber
 		if !ok {
-			return
+			break
 		}
 
 		if clock {

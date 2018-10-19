@@ -20,13 +20,15 @@ var instances = make(map[string]*Bus)
  *
  */
 type Bus struct {
-	Address     AddressLinesType
-	Data        DataLinesType
-	Clock       chan bool
-	RW          bool
-	subscribers []Subscriber
-	name        string
-	Halt        bool
+	Address          AddressLinesType
+	Data             DataLinesType
+	Clock            chan bool
+	Reset            chan bool
+	RW               bool
+	clockSubscribers []Subscriber
+	resetSubscribers []Subscriber
+	name             string
+	Halt             bool
 	sync.Mutex
 }
 
@@ -41,19 +43,29 @@ func NewBus(busName string) *Bus {
 		return existingBus
 	}
 
-	bus := Bus{0, 0, make(chan bool), false, make([]Subscriber, 0), busName, true, sync.Mutex{}}
+	bus := Bus{0, 0, make(chan bool), make(chan bool), false, make([]Subscriber, 0), make([]Subscriber, 0), busName, true, sync.Mutex{}}
+	//bus := Bus{}
+	//bus.name = busName
 	instances[busName] = &bus
 
-	go bus.process()
+	go bus.processClockLine()
+	go bus.processResetLine()
 
 	return &bus
 }
 
 /**
- * Subscribe to bus events.
+ * Subscribe to clock bus events.
  */
-func (bus *Bus) Subscribe(subscriber Subscriber) {
-	bus.subscribers = append(bus.subscribers, subscriber)
+func (bus *Bus) SubscribeToClock(subscriber Subscriber) {
+	bus.clockSubscribers = append(bus.clockSubscribers, subscriber)
+}
+
+/**
+ * Subscribe to reset bus events.
+ */
+func (bus *Bus) SubscribeToReset(subscriber Subscriber) {
+	bus.resetSubscribers = append(bus.resetSubscribers, subscriber)
 }
 
 /**
@@ -91,6 +103,7 @@ func (bus *Bus) Read(address AddressLinesType) DataLinesType {
 func (bus *Bus) Close() {
 	delete(instances, bus.name)
 	close(bus.Clock)
+	close(bus.Reset)
 }
 
 /**
@@ -102,17 +115,43 @@ func (bus *Bus) clockBus(state bool) {
 }
 
 /**
- * Monitor the bus Clock and fan it out to all subscribers.
+ * Clock the bus.
  */
-func (bus *Bus) process() {
+func (bus *Bus) ResetBus() {
+	bus.Lock()
+	bus.Reset <- true
+	bus.Lock()
+	bus.Reset <- false
+	bus.Lock()
+	defer bus.Unlock()
+}
+
+/**
+ * Monitor the bus Clock and fan it out to all clockSubscribers.
+ */
+func (bus *Bus) processClockLine() {
 	for {
 		clock, ok := <-bus.Clock
 		if !ok {
 			return
 		}
 
-		for _, subscriber := range bus.subscribers {
+		for _, subscriber := range bus.clockSubscribers {
 			subscriber <- clock
+		}
+		bus.Unlock()
+	}
+}
+
+func (bus *Bus) processResetLine() {
+	for {
+		reset, ok := <-bus.Reset
+		if !ok {
+			return
+		}
+
+		for _, subscriber := range bus.resetSubscribers {
+			subscriber <- reset
 		}
 		bus.Unlock()
 	}

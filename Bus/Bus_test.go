@@ -10,7 +10,7 @@ func TestSubscribe(t *testing.T) {
 	defer bus.Close()
 
 	subscriber := make(Subscriber)
-	bus.Subscribe(subscriber)
+	bus.SubscribeToClock(subscriber)
 
 	bus.Lock()
 	bus.Address = 0x10
@@ -28,7 +28,7 @@ func TestSubscribe(t *testing.T) {
 }
 
 /**
- * Ensure the bus is fanning out events to multiple subscribers.
+ * Ensure the bus is fanning out events to multiple clockSubscribers.
  */
 func TestSubscribeMultiple(t *testing.T) {
 	const subscribersCount = 10
@@ -50,7 +50,7 @@ func TestSubscribeMultiple(t *testing.T) {
 
 	for ix := 0; ix < subscribersCount; ix++ {
 		subscribers[ix] = make(Subscriber)
-		bus.Subscribe(subscribers[ix])
+		bus.SubscribeToClock(subscribers[ix])
 		go listener(subscribers[ix], &oks, ix, *bus)
 	}
 
