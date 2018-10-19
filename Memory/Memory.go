@@ -45,7 +45,7 @@ func (memory *Memory) process() {
 		}
 
 		if clock {
-			if memory.bus.Address < memory.baseAddress || memory.bus.Address > memory.baseAddress+memory.size {
+			if memory.bus.Address < memory.baseAddress || memory.bus.Address >= memory.baseAddress+memory.size {
 				continue
 			}
 

@@ -55,19 +55,23 @@ func (processor *subleqProcessor) process() {
 
 		fmt.Println(processor)
 
-		opA := processor.bus.Read(processor.PC)
-		opB := processor.bus.Read(processor.PC + 1)
+		opAAddress := Bus.AddressLinesType(processor.bus.Read(processor.PC))
+		opBAddress := Bus.AddressLinesType(processor.bus.Read(processor.PC + 1))
+		branchAddress := Bus.AddressLinesType(processor.bus.Read(processor.PC + 2))
+		processor.PC += 3
+
+		opA := processor.bus.Read(opAAddress)
+		opB := processor.bus.Read(opBAddress)
+
 		processor.A = opB - opA
-		processor.bus.Write(processor.PC, processor.A)
-		processor.Z = processor.A == 0
+		processor.Z = opB == opA
 		processor.N = opB < opA
 
-		if processor.Z || processor.N {
-			processor.PC = Bus.AddressLinesType(processor.bus.Read(processor.PC + 2))
-			continue
-		}
+		processor.bus.Write(opAAddress, processor.A)
 
-		processor.PC += 3
+		if processor.Z || processor.N {
+			processor.PC = branchAddress
+		}
 	}
 }
 
