@@ -5,7 +5,6 @@ import (
 	"Go-OISC/Memory"
 	"Go-OISC/Processor"
 	"fmt"
-	"time"
 )
 
 func main() {
@@ -18,28 +17,18 @@ func main() {
 		0x10, 0X0D, 0xFF, // 0x03	SUBLEQ 0D 09 FF
 		0x0E, 0x11, 0xFF, // 0x06	SUBLEQ 0E 11 FF
 		0x11, 0x11, 0xFF, // 0x09   SUBLEQ 11 11 FF
-		1,    // 0x0C	Operand A
-		1,    // 0x0D	Operand B
-		0x00, // 0x0E	Result
-		0x00, // 0x0F	Swap 1
-		0x00, // 0x10	Swap 2
-		0x01, // 0x11   Swap 3
+		1, // 0x0C	Operand A
+		1, // 0x0D	Operand B
+		0, // 0x0E	Result
+		0, // 0x0F	Swap 1
+		0, // 0x10	Swap 2
+		1, // 0x11   Swap 3
 	} {
 		bus.Write(Bus.AddressLinesType(address), instruction)
 	}
 
 	bus.ResetBus()
-	for {
-		if bus.Halt {
-			break
-		}
-		time.Sleep(100 * time.Millisecond)
-	}
-
-	for address := 0; address < 0xB; address++ {
-		val := bus.Read(Bus.AddressLinesType(address))
-		fmt.Println(val)
-	}
+	<-bus.Brk
 
 	fmt.Print("result:")
 	fmt.Println(bus.Read(Bus.AddressLinesType(0x0E)))

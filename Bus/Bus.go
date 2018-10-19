@@ -24,11 +24,11 @@ type Bus struct {
 	Data             DataLinesType
 	Clock            chan bool
 	Reset            chan bool
+	Brk              chan bool
 	RW               bool
 	clockSubscribers []Subscriber
 	resetSubscribers []Subscriber
 	name             string
-	Halt             bool
 	sync.Mutex
 }
 
@@ -43,7 +43,17 @@ func NewBus(busName string) *Bus {
 		return existingBus
 	}
 
-	bus := Bus{0, 0, make(chan bool), make(chan bool), false, make([]Subscriber, 0), make([]Subscriber, 0), busName, true, sync.Mutex{}}
+	bus := Bus{0, 0,
+		make(chan bool),
+		make(chan bool),
+		make(chan bool),
+		false,
+		make([]Subscriber, 0),
+		make([]Subscriber, 0),
+		busName,
+		sync.Mutex{},
+	}
+
 	//bus := Bus{}
 	//bus.name = busName
 	instances[busName] = &bus
@@ -107,7 +117,7 @@ func (bus *Bus) Close() {
 }
 
 /**
- * Clock the bus.
+ * Clock devices on the bus.
  */
 func (bus *Bus) clockBus(state bool) {
 	bus.Lock()
@@ -115,7 +125,7 @@ func (bus *Bus) clockBus(state bool) {
 }
 
 /**
- * Clock the bus.
+ * Reset devices on the bus.
  */
 func (bus *Bus) ResetBus() {
 	bus.Lock()
@@ -127,7 +137,7 @@ func (bus *Bus) ResetBus() {
 }
 
 /**
- * Monitor the bus Clock and fan it out to all clockSubscribers.
+ * Monitor the bus Clock line and fan it out to all clockSubscribers.
  */
 func (bus *Bus) processClockLine() {
 	for {
@@ -143,6 +153,9 @@ func (bus *Bus) processClockLine() {
 	}
 }
 
+/**
+ * Monitor the bus Reset line and fan it out to all resetSubscribers.
+ */
 func (bus *Bus) processResetLine() {
 	for {
 		reset, ok := <-bus.Reset
@@ -157,6 +170,9 @@ func (bus *Bus) processResetLine() {
 	}
 }
 
+/**
+ * String representation of the bus status.
+ */
 func (bus *Bus) String() string {
 	return fmt.Sprintf("A:%#X D:%#X", bus.Address, bus.Data)
 }
