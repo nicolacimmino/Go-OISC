@@ -1,7 +1,6 @@
-package Memory
+package Components
 
 import (
-	"Go-OISC/Bus"
 	"testing"
 )
 
@@ -9,7 +8,7 @@ import (
  * Ensure we can read back a value written in memory.
  */
 func TestReadBack(t *testing.T) {
-	bus := Bus.NewBus("main")
+	bus := NewBus("main")
 	defer bus.Close()
 
 	memory := NewMemory(0xFF, 0x0, bus)
@@ -27,7 +26,7 @@ func TestReadBack(t *testing.T) {
  * Ensure reading outside the address space of the memory returns zero.
  */
 func TestReadOutsideBounds(t *testing.T) {
-	bus := Bus.NewBus("main")
+	bus := NewBus("main")
 	defer bus.Close()
 
 	memory := NewMemory(0x20, 0x0, bus)
@@ -45,7 +44,7 @@ func TestReadOutsideBounds(t *testing.T) {
  * Ensure memories on different memory blocks don't interfere.
  */
 func TestMultipleMemories(t *testing.T) {
-	bus := Bus.NewBus("main")
+	bus := NewBus("main")
 	defer bus.Close()
 
 	memoryA := NewMemory(0x20, 0x0, bus)

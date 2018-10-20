@@ -1,18 +1,16 @@
 package main
 
 import (
-	"Go-OISC/Bus"
-	"Go-OISC/Memory"
-	"Go-OISC/Processor"
+	"Go-OISC/Components"
 	"fmt"
 )
 
 func main() {
-	bus := Bus.NewBus("main")
-	Memory.NewMemory(0xFF, 0x00, bus)
-	Processor.NewSubleqProcessor(bus)
+	bus := Components.NewBus("main")
+	Components.NewMemory(0xFF, 0x00, bus)
+	Components.NewSubleqProcessor(bus)
 
-	for address, instruction := range []Bus.DataLinesType{
+	for address, instruction := range []Components.DataLinesType{
 		0x0F, 0x0C, 0xFF, // 0x00	SUBLEQ 0C 09 FF
 		0x10, 0X0D, 0xFF, // 0x03	SUBLEQ 0D 09 FF
 		0x0E, 0x11, 0xFF, // 0x06	SUBLEQ 0E 11 FF
@@ -24,12 +22,12 @@ func main() {
 		0, // 0x10	Swap 2
 		1, // 0x11   Swap 3
 	} {
-		bus.Write(Bus.AddressLinesType(address), instruction)
+		bus.Write(Components.AddressLinesType(address), instruction)
 	}
 
 	bus.ResetBus()
 	<-bus.Brk
 
 	fmt.Print("result:")
-	fmt.Println(bus.Read(Bus.AddressLinesType(0x0E)))
+	fmt.Println(bus.Read(Components.AddressLinesType(0x0E)))
 }

@@ -1,7 +1,6 @@
-package Processor
+package Components
 
 import (
-	"Go-OISC/Bus"
 	"fmt"
 )
 
@@ -9,21 +8,21 @@ import (
  *
  */
 type subleqProcessor struct {
-	bus *Bus.Bus             // The bus this processor is attached to
-	PC  Bus.AddressLinesType // The Program Counter
-	A   Bus.DataLinesType    // The Accumulator
-	Z   bool                 // The Z flag, set if the last operation result was zero
-	N   bool                 // The N flag, set if the last operation result was negative
+	bus *Bus             // The bus this processor is attached to
+	PC  AddressLinesType // The Program Counter
+	A   DataLinesType    // The Accumulator
+	Z   bool             // The Z flag, set if the last operation result was zero
+	N   bool             // The N flag, set if the last operation result was negative
 }
 
 /**
  * Constructor.
  */
-func NewSubleqProcessor(bus *Bus.Bus) *subleqProcessor {
+func NewSubleqProcessor(bus *Bus) *subleqProcessor {
 	processor := subleqProcessor{}
 	processor.bus = bus
 
-	resetSubscriber := make(Bus.Subscriber)
+	resetSubscriber := make(BusSubscriber)
 	bus.SubscribeToReset(resetSubscriber)
 
 	go processor.processResetLine(resetSubscriber)
@@ -34,7 +33,7 @@ func NewSubleqProcessor(bus *Bus.Bus) *subleqProcessor {
 /**
  * Watches the bus reset line and resets the processor on a positive transition.
  */
-func (processor *subleqProcessor) processResetLine(resetSubscriber Bus.Subscriber) {
+func (processor *subleqProcessor) processResetLine(resetSubscriber BusSubscriber) {
 	for {
 		reset, ok := <-resetSubscriber
 		if !ok {
@@ -64,9 +63,9 @@ func (processor *subleqProcessor) process() {
 		}
 
 		// Fetch the three operands addresses
-		opAAddress := Bus.AddressLinesType(processor.bus.Read(processor.PC))
-		opBAddress := Bus.AddressLinesType(processor.bus.Read(processor.PC + 1))
-		branchAddress := Bus.AddressLinesType(processor.bus.Read(processor.PC + 2))
+		opAAddress := AddressLinesType(processor.bus.Read(processor.PC))
+		opBAddress := AddressLinesType(processor.bus.Read(processor.PC + 1))
+		branchAddress := AddressLinesType(processor.bus.Read(processor.PC + 2))
 		processor.PC += 3
 
 		// Fetch the A/B values

@@ -1,4 +1,4 @@
-package Bus
+package Components
 
 import "testing"
 
@@ -9,7 +9,7 @@ func TestSubscribe(t *testing.T) {
 	bus := NewBus("main")
 	defer bus.Close()
 
-	subscriber := make(Subscriber)
+	subscriber := make(BusSubscriber)
 	bus.SubscribeToClock(subscriber)
 
 	bus.Lock()
@@ -36,7 +36,7 @@ func TestSubscribeMultiple(t *testing.T) {
 	bus := NewBus("main")
 	defer bus.Close()
 
-	listener := func(subscriber Subscriber, oks *[subscribersCount]bool, ix int, bus Bus) {
+	listener := func(subscriber BusSubscriber, oks *[subscribersCount]bool, ix int, bus Bus) {
 		for {
 			clock := <-subscriber
 			if clock {
@@ -45,11 +45,11 @@ func TestSubscribeMultiple(t *testing.T) {
 		}
 	}
 
-	subscribers := [10]Subscriber{}
+	subscribers := [10]BusSubscriber{}
 	oks := [subscribersCount]bool{}
 
 	for ix := 0; ix < subscribersCount; ix++ {
-		subscribers[ix] = make(Subscriber)
+		subscribers[ix] = make(BusSubscriber)
 		bus.SubscribeToClock(subscribers[ix])
 		go listener(subscribers[ix], &oks, ix, *bus)
 	}

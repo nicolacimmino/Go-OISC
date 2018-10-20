@@ -1,26 +1,24 @@
-package Memory
-
-import "Go-OISC/Bus"
+package Components
 
 /**
  *
  */
 type Memory struct {
-	data               []Bus.DataLinesType
-	baseAddress        Bus.AddressLinesType
-	size               Bus.AddressLinesType
-	bus                *Bus.Bus
-	busClockSubscriber Bus.Subscriber
+	data               []DataLinesType
+	baseAddress        AddressLinesType
+	size               AddressLinesType
+	bus                *Bus
+	busClockSubscriber BusSubscriber
 }
 
 /**
  * Constructor.
  */
-func NewMemory(size Bus.AddressLinesType, baseAddress Bus.AddressLinesType, bus *Bus.Bus) *Memory {
-	busClockSubscriber := make(Bus.Subscriber)
+func NewMemory(size AddressLinesType, baseAddress AddressLinesType, bus *Bus) *Memory {
+	busClockSubscriber := make(BusSubscriber)
 	bus.SubscribeToClock(busClockSubscriber)
 
-	m := Memory{make([]Bus.DataLinesType, size), baseAddress, size, bus, busClockSubscriber}
+	m := Memory{make([]DataLinesType, size), baseAddress, size, bus, busClockSubscriber}
 
 	go m.process()
 

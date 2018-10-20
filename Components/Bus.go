@@ -1,4 +1,4 @@
-package Bus
+package Components
 
 import (
 	"fmt"
@@ -9,7 +9,7 @@ type AddressLinesType uint8
 
 type DataLinesType uint8
 
-type Subscriber chan bool
+type BusSubscriber chan bool
 
 /**
  * Map of named instances of this multiton.
@@ -26,8 +26,8 @@ type Bus struct {
 	Reset            chan bool
 	Brk              chan bool
 	RW               bool
-	clockSubscribers []Subscriber
-	resetSubscribers []Subscriber
+	clockSubscribers []BusSubscriber
+	resetSubscribers []BusSubscriber
 	name             string
 	sync.Mutex
 }
@@ -48,14 +48,12 @@ func NewBus(busName string) *Bus {
 		make(chan bool),
 		make(chan bool),
 		false,
-		make([]Subscriber, 0),
-		make([]Subscriber, 0),
+		make([]BusSubscriber, 0),
+		make([]BusSubscriber, 0),
 		busName,
 		sync.Mutex{},
 	}
 
-	//bus := Bus{}
-	//bus.name = busName
 	instances[busName] = &bus
 
 	go bus.processClockLine()
@@ -67,14 +65,14 @@ func NewBus(busName string) *Bus {
 /**
  * Subscribe to clock bus events.
  */
-func (bus *Bus) SubscribeToClock(subscriber Subscriber) {
+func (bus *Bus) SubscribeToClock(subscriber BusSubscriber) {
 	bus.clockSubscribers = append(bus.clockSubscribers, subscriber)
 }
 
 /**
  * Subscribe to reset bus events.
  */
-func (bus *Bus) SubscribeToReset(subscriber Subscriber) {
+func (bus *Bus) SubscribeToReset(subscriber BusSubscriber) {
 	bus.resetSubscribers = append(bus.resetSubscribers, subscriber)
 }
 
@@ -133,7 +131,7 @@ func (bus *Bus) ResetBus() {
 	bus.Lock()
 	bus.Reset <- false
 	bus.Lock()
-	defer bus.Unlock()
+	bus.Unlock()
 }
 
 /**

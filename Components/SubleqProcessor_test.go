@@ -1,17 +1,15 @@
-package Processor
+package Components
 
 import (
-	"Go-OISC/Bus"
-	"Go-OISC/Memory"
 	"testing"
 )
 
 func TestRunAnd(t *testing.T) {
-	bus := Bus.NewBus("main")
-	Memory.NewMemory(0xFF, 0x00, bus)
+	bus := NewBus("main")
+	NewMemory(0xFF, 0x00, bus)
 	NewSubleqProcessor(bus)
 
-	testVectors := [][]Bus.DataLinesType{
+	testVectors := [][]DataLinesType{
 		{0, 0, 0},
 		{0, 1, 0},
 		{1, 0, 0},
@@ -22,7 +20,7 @@ func TestRunAnd(t *testing.T) {
 		A := testVector[0]
 		B := testVector[1]
 
-		for address, instruction := range []Bus.DataLinesType{
+		for address, instruction := range []DataLinesType{
 			0x0F, 0x0C, 0xFF, // 0x00	SUBLEQ 0C 09 FF
 			0x10, 0X0D, 0xFF, // 0x03	SUBLEQ 0D 09 FF
 			0x0E, 0x11, 0xFF, // 0x06	SUBLEQ 0E 11 FF
@@ -34,7 +32,7 @@ func TestRunAnd(t *testing.T) {
 			0, // 0x10	Swap 2
 			1, // 0x11   Swap 3
 		} {
-			bus.Write(Bus.AddressLinesType(address), instruction)
+			bus.Write(AddressLinesType(address), instruction)
 		}
 
 		bus.ResetBus()
