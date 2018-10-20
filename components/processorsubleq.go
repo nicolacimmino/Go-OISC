@@ -1,4 +1,4 @@
-package Components
+package components
 
 import (
 	"fmt"
@@ -8,11 +8,11 @@ import (
  *
  */
 type subleqProcessor struct {
-	bus *Bus             // The bus this processor is attached to
-	PC  AddressLinesType // The Program Counter
-	A   DataLinesType    // The Accumulator
-	Z   bool             // The Z flag, set if the last operation result was zero
-	N   bool             // The N flag, set if the last operation result was negative
+	PC AddressLinesType // The Program Counter
+	A  DataLinesType    // The Accumulator
+	Z  bool             // The Z flag, set if the last operation result was zero
+	N  bool             // The N flag, set if the last operation result was negative
+	processorAbstract
 }
 
 /**
@@ -20,35 +20,18 @@ type subleqProcessor struct {
  */
 func NewSubleqProcessor(bus *Bus) *subleqProcessor {
 	processor := subleqProcessor{}
-	processor.bus = bus
-
-	resetSubscriber := make(BusSubscriber)
-	bus.SubscribeToReset(resetSubscriber)
-
-	go processor.processResetLine(resetSubscriber)
+	processor.initProcessor(bus, processor.onReset)
 
 	return &processor
 }
 
-/**
- * Watches the bus reset line and resets the processor on a positive transition.
- */
-func (processor *subleqProcessor) processResetLine(resetSubscriber BusSubscriber) {
-	for {
-		reset, ok := <-resetSubscriber
-		if !ok {
-			break
-		}
+func (processor *subleqProcessor) onReset() {
+	processor.PC = 0
+	processor.A = 0
+	processor.Z = false
+	processor.N = false
 
-		if reset {
-			processor.PC = 0
-			processor.A = 0
-			processor.Z = false
-			processor.N = false
-
-			go processor.process()
-		}
-	}
+	go processor.process()
 }
 
 /**
