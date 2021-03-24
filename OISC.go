@@ -5,6 +5,7 @@ import (
 	"fmt"
 )
 
+
 func main() {
 	bus := components.NewBus("main")
 	components.NewMemory(0xFF, 0x00, bus)
